@@ -33,3 +33,6 @@ jobs:
       - name: Terraform plan
         run: terraform plan
         working-directory: ./terraform
+      - name: Terraform apply
+        if: github.event_name == 'push' && github.ref_name == 'main'
+        run: terraform apply -auto-approve
