@@ -75,7 +75,7 @@ resource "aws_security_group" "lb_sg" {
 }
 
 resource "aws_lb_target_group" "target_group" {
-  name        = "target_group"
+  name        = "target-group"
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
