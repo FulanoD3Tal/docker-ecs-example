@@ -21,6 +21,7 @@ jobs:
           cache: 'npm'
       - run: npm install
       - run: npm run build
+  # Create the docker file
   create-docker-image:
     name: Build the docker image
     runs-on: ubuntu-latest
