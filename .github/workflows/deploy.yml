@@ -11,13 +11,12 @@ jobs:
   # Create the static files to website
   build:
     runs-on: ubuntu-latest
-    env:
-      NODE_ENV: production
     steps:
       - uses: actions/checkout@v3
       - name: Configure node
         uses: actions/setup-node@v3
         with:
           node-version: 18.x
+          cache: 'npm'
       - run: npm install
       - run: npm run build
