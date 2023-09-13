@@ -8,6 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Create the static files to website
   build:
     runs-on: ubuntu-latest
     env:
@@ -18,5 +19,5 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18.x
-      - run: npm ci
+      - run: npm install
       - run: npm run build
