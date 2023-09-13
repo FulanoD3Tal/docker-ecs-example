@@ -25,6 +25,15 @@ resource "aws_subnet" "public_subnet_1" {
     name = "public-subnet"
   }
 }
+resource "aws_subnet" "public_subnet_2" {
+  vpc_id                  = aws_vpc.strapi_vpc.id
+  map_public_ip_on_launch = true
+  availability_zone       = data.aws_availability_zones.available.names[1]
+  cidr_block              = "10.0.2.0/24"
+  tags = {
+    name = "public-subnet"
+  }
+}
 
 resource "aws_route_table" "public_table" {
   vpc_id = aws_vpc.strapi_vpc.id
@@ -37,4 +46,38 @@ resource "aws_route_table" "public_table" {
 resource "aws_route_table_association" "public_subnet_1" {
   subnet_id      = aws_subnet.public_subnet_1.id
   route_table_id = aws_route_table.public_table.id
+}
+resource "aws_route_table_association" "public_subnet_2" {
+  subnet_id      = aws_subnet.public_subnet_2.id
+  route_table_id = aws_route_table.public_table.id
+}
+
+resource "aws_alb" "vite_load_balancer" {
+  name               = "vite-balancer-dev"
+  load_balancer_type = "application"
+  subnets            = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
+  security_groups    = [aws_security_group.lb_sg.id]
+}
+
+resource "aws_security_group" "lb_sg" {
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_lb_target_group" "target_group" {
+  name        = "target_group"
+  port        = 80
+  protocol    = "HTTP"
+  target_type = "ip"
+  vpc_id      = aws_vpc.strapi_vpc.id
 }
