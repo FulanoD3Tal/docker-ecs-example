@@ -3,10 +3,12 @@ name: Terraform deployment
 on:
   push:
     branches: [main]
-    paths: 'terraform/**'
+    paths:
+      - 'terraform/**'
   pull_request:
     branches: [main]
-    paths: 'terraform/**'
+    paths:
+      - 'terraform/**'
 
 jobs:
   config:
@@ -25,5 +27,7 @@ jobs:
         uses: hashicorp/setup-terraform@v2
       - name: Terraform init
         run: terraform init
+        working-directory: /terraform
       - name: Terraform plan
         run: terraform plan
+        working-directory: /terraform
