@@ -60,7 +60,7 @@ resource "aws_ecs_service" "vite_ecs_service" {
   }
 
   network_configuration {
-    subnets          = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2]
+    subnets          = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
     assign_public_ip = true
 
   }
