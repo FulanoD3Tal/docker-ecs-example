@@ -12,7 +12,7 @@ on:
 
 jobs:
   config:
-    name: 'Configurate AWS and clone repo'
+    name: 'Create infraestructure (Terraform)'
     runs-on: ubuntu-latest
     env:
       TF_VAR_aws_region: us-east-1
