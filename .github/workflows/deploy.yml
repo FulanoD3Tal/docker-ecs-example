@@ -3,8 +3,12 @@ name: Deploy to ECS
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'terraform/**'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'terraform/**'
   workflow_dispatch:
 
 jobs:
