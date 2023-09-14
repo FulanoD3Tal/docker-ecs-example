@@ -27,7 +27,15 @@ function App() {
         Click on the Vite and React logos to learn more
       </p>
 
-      <p>v6</p>
+      <p>
+        Et veniam sunt nulla aliqua. Ad velit eu eu ullamco. Cupidatat cupidatat
+        qui excepteur voluptate mollit reprehenderit excepteur magna enim
+        consequat. Cillum pariatur duis fugiat laborum eiusmod duis exercitation
+        reprehenderit tempor velit dolore laboris. Incididunt occaecat eu
+        laborum id. Amet commodo adipisicing eu nulla aute dolore culpa.
+      </p>
+
+      <p>v7</p>
     </>
   );
 }
