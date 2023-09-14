@@ -5,13 +5,13 @@ resource "aws_ecs_cluster" "ecs_cluster" {
 resource "aws_ecs_task_definition" "vite_task" {
   family = "vite-first-app"
   container_definitions = jsonencode([{
-    name      = "app"
+    name      = "vite-first-app"
     image     = "${aws_ecr_repository.ecr_repository.repository_url}"
     essential = true
     portMappings = [
       {
-        containerPort : 8080
-        hostPort : 8080
+        containerPort : 80
+        hostPort : 80
       }
     ]
     memory = 512
@@ -56,17 +56,20 @@ resource "aws_ecs_service" "vite_ecs_service" {
   load_balancer {
     target_group_arn = aws_lb_target_group.target_group.arn
     container_name   = aws_ecs_task_definition.vite_task.family
-    container_port   = 8080
+    container_port   = 80
   }
 
   network_configuration {
     subnets          = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
     assign_public_ip = true
-
+    security_groups  = [aws_security_group.service_security_group.id]
   }
 }
 
+
+
 resource "aws_security_group" "service_security_group" {
+  vpc_id = aws_vpc.strapi_vpc.id
   ingress {
     from_port       = 0
     to_port         = 0
