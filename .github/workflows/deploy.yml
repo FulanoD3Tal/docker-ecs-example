@@ -44,6 +44,7 @@ jobs:
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG -t $REGISTRY/$REPOSITORY:latest .
           docker push $REGISTRY/$REPOSITORY:latest
+          echo "image=$REGISTRY/$REPOSITORY:latest" >> $GITHUB_OUTPUT
       - name: Get the last task definition
         run: |
           aws ecs describe-task-definition \
