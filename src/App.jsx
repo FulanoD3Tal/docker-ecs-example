@@ -35,7 +35,7 @@ function App() {
         laborum id. Amet commodo adipisicing eu nulla aute dolore culpa.
       </p>
 
-      <p>v7</p>
+      <p>v8</p>
     </>
   );
 }

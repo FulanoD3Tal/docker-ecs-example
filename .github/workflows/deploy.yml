@@ -42,17 +42,33 @@ jobs:
           REPOSITORY: ${{secrets.ECR_REPOSITORY}}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
-          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
-          echo "image=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG -t $REGISTRY/$REPOSITORY:latest .
+          docker push $REGISTRY/$REPOSITORY:latest
+          echo "image=$REGISTRY/$REPOSITORY:latest" >> $GITHUB_OUTPUT
       - name: Get the last task definition
         id: task-definition
         run: |
-         aws ecs describe-task-definition \
-            --task-definition ${{secrets.CONTAINER_NAME}} \
-            --query taskDefinition > task_definition.json
-      - name: Update the ECS Task definition
-        run: |
-         aws ecs register-task-definition \
-            --cli-input-json file://./task_definition.json
+          aws ecs describe-task-definition \
+             --task-definition ${{secrets.CONTAINER_NAME}} \
+             --query 'taskDefinition.{ 
+             "containerDefinitions":containerDefinitions,
+             "family":family,
+             "executionRoleArn":executionRoleArn,
+             "networkMode":networkMode,
+             "volumes":volumes,
+             "placementConstraints":placementConstraints,
+             "requiresCompatibilities":requiresCompatibilities,
+             "cpu":cpu,
+             "memory":memory 
+             }' > task_definition.json
 
+      - name: Generate new revision of task definition
+        run: |
+          aws ecs register-task-definition \
+             --cli-input-json file://./task_definition.json
+      - name: Update the cluster service
+        run: |
+          aws ecs update-service \
+            --cluster ${{secrets.CLUSTER_NAME}} \
+            --service ${{secrets.CLUSTER_SERVICE}} \
+            --task-definition ${{secrets.CONTAINER_NAME}}
