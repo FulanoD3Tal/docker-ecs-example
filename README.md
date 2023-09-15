@@ -90,7 +90,7 @@ node_modules
 .env
 ```
 
-The importart file is the `Dockerfile` where we are going to create a server with the static files from vite build process
+The important file is the `Dockerfile` where we are going to create a server with the static files from vite build process
 
 ```dockerfile
 # Dockerfile
@@ -129,3 +129,164 @@ docker run --name website -d -p 80:80 vite-app
 
 if you go to [http://localhost](http://localhost) you should see the vite app we created
 
+## Upload to the cloud
+
+We would use AWS as cloud provider, using the next diagram
+
+![aws_diagram](/images/AWS_diagram.png)
+
+The core of this infrastructure is the `ECS` where aws will managed our docker image in order to deploy an application
+
+> There are more item in the infrastructure, just try to keep as simple as posible
+
+to create the infrastructure i used [Terraform](https://www.terraform.io/)
+
+there is a `terraform` folder with all the files to build the necessary infrastructure to deploy everything
+
+```markdown
+.
+├── Dockerfile
+├── images
+│ └── AWS_diagram.png
+├── index.html
+├── package.json
+├── package-lock.json
+├── public
+│ └── vite.svg
+├── README.md
+├── src
+│ ├── App.css
+│ ├── App.jsx
+│ ├── assets
+│ │ └── react.svg
+│ ├── index.css
+│ └── main.jsx
+├── terraform (+)
+│ ├── ecr.tf (+)
+│ ├── ecs.tf (+)
+│ ├── main.tf (+)
+│ ├── variables.tf (+)
+│ └── vpc.tf (+)
+└── vite.config.js
+```
+
+The mains elements in this infrastructure are:
+
+### The docker container registry (ECR)
+
+![ecr](/images/ECR.png)
+
+A place to upload our generated docker image
+
+> This is no necessary, can use other container registry if you want it but since we are using Terraform is easy to keep all in the same cloud provider
+
+This terraform code will create it
+
+```terraform
+resource "aws_ecr_repository" "ecr_repository" {
+  name                 = "vite-docker-repository"
+  image_tag_mutability = "MUTABLE"
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+```
+
+### The task definition
+
+![Alt text](images/Amazon-Elastic-Container-Service_Task.png)
+
+The task definition is a blueprint of the runner with the docker image we will create
+
+```
+resource "aws_ecs_task_definition" "vite_task" {
+  family = "vite-first-app"
+  container_definitions = jsonencode([{
+    name      = "vite-first-app"
+    image     = "${aws_ecr_repository.ecr_repository.repository_url}"
+    essential = true
+    portMappings = [
+      {
+        containerPort : 80
+        hostPort : 80
+      }
+    ]
+    memory = 512
+    cpu    = 256
+  }])
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  memory                   = 512
+  cpu                      = 256
+  execution_role_arn       = aws_iam_role.ecsTaskExecutionRole.arn
+}
+```
+
+### The cluster service
+
+![Alt text](images/Amazon-Elastic-Container-Service_Container.png)
+
+> First: a cluster will be the playground where all our task will run, is defined in the terraform file with this code, so there no much explanation
+
+```hcl
+resource "aws_ecs_cluster" "ecs_cluster" {
+  name = "vite-docker-cluster"
+}
+```
+
+We can create a **task** in the **cluster** as a single element, but the benefit of the service is that we define a ideal **state**
+
+- Minimum task running
+- Auto scaling
+- etc
+
+So we will define a cluster service with 2 tasks always running for redundancy
+
+```hcl
+resource "aws_ecs_service" "vite_ecs_service" {
+  name = "vite-app-service"
+
+  cluster         = aws_ecs_cluster.ecs_cluster.id
+  task_definition = aws_ecs_task_definition.vite_task.arn
+  launch_type     = "FARGATE"
+  desired_count   = 2
+  load_balancer {
+    target_group_arn = aws_lb_target_group.target_group.arn
+    container_name   = aws_ecs_task_definition.vite_task.family
+    container_port   = 80
+  }
+
+  network_configuration {
+    subnets          = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
+    assign_public_ip = true
+    security_groups  = [aws_security_group.service_security_group.id]
+  }
+}
+
+```
+
+### Load balancer
+
+![Alt text](images/Elastic-Load-Balancing.png)
+
+In order to have redundancy we need a way to manage the inner traffic from the client to our existing tasks, for that exist the **load balancer** that manage the network traffic and redirect to the available servers or task in our case
+
+```hcl
+resource "aws_alb" "vite_load_balancer" {
+  name               = "vite-balancer-dev"
+  load_balancer_type = "application"
+  subnets            = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
+  security_groups    = [aws_security_group.lb_sg.id]
+}
+```
+
+with the command `plan` and `apply` we should have all deployed in order to start to create or production ready website docker image
+
+```bash
+# Move to the terraform directory
+cd terraform
+# See the change to apply in the aws cloud
+terraform plan
+#if everything is correct apply the changes
+terraform apply --auto-approve
+```
