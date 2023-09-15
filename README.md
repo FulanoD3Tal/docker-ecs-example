@@ -197,7 +197,7 @@ resource "aws_ecr_repository" "ecr_repository" {
 
 The task definition is a blueprint of the runner with the docker image we will create
 
-```
+```terraform
 resource "aws_ecs_task_definition" "vite_task" {
   family = "vite-first-app"
   container_definitions = jsonencode([{
@@ -227,7 +227,7 @@ resource "aws_ecs_task_definition" "vite_task" {
 
 > First: a cluster will be the playground where all our task will run, is defined in the terraform file with this code, so there no much explanation
 
-```hcl
+```terraform
 resource "aws_ecs_cluster" "ecs_cluster" {
   name = "vite-docker-cluster"
 }
@@ -241,7 +241,7 @@ We can create a **task** in the **cluster** as a single element, but the benefit
 
 So we will define a cluster service with 2 tasks always running for redundancy
 
-```hcl
+```terraform
 resource "aws_ecs_service" "vite_ecs_service" {
   name = "vite-app-service"
 
