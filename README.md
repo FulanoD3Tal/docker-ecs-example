@@ -1,5 +1,4 @@
 # ECS example
-
 #### This example will use a [Vite](https://vitejs.dev/) app to deploy a production ready website using this service and [Docker](https://www.docker.com/)
 
 ```
@@ -129,7 +128,7 @@ docker run --name website -d -p 80:80 vite-app
 
 if you go to [http://localhost](http://localhost) you should see the vite app we created
 
-## Upload to the cloud
+## Create the infraestructure
 
 We would use AWS as cloud provider, using the next diagram
 
@@ -269,7 +268,7 @@ resource "aws_ecs_service" "vite_ecs_service" {
 
 ![Alt text](images/Elastic-Load-Balancing.png)
 
-In order to have redundancy we need a way to manage the inner traffic from the client to our existing tasks, for that exist the **load balancer** that manage the network traffic and redirect to the available servers or task in our case
+In order to have redundancy we need a way to manage the inner traffic from the clients to our existing tasks, for that exist the **load balancer** that manage the network traffic and redirect to the available servers or task in our case
 
 ```hcl
 resource "aws_alb" "vite_load_balancer" {
@@ -290,3 +289,80 @@ terraform plan
 #if everything is correct apply the changes
 terraform apply --auto-approve
 ```
+
+The last command you output the url of the application
+
+Right now should show a `503` error page since there is not task running
+
+## Upload to the cloud
+
+The main pipeline is the current
+
+- Upload the docker image
+- Create a task definition/revision
+- Update the service to start using this new version of the tasks
+
+With this configuration is very easy to update the production application and let AWS to managed everything by it own
+
+### Upload the docker image
+
+Here is the reason to create the repository, we need a source of true of the last version of the web app
+
+```bash
+# build the image and tag it with the corresponding repository url/name
+docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG -t $REGISTRY/$REPOSITORY:latest .
+# push to the repository
+docker push $REGISTRY/$REPOSITORY:latest
+```
+
+#### Create a task definition/revision
+
+The terraform plan create the task definition and linked to the service, so we only have to create revision in order to automate everything
+
+> you can create a all new task and the added to the service if you want a manual setup
+
+To do that, we are going to use the aws cli
+
+First we need the current task-definition and save it into json, getting only the fields that we need to create a new revision
+
+```bash
+aws ecs describe-task-definition \
+  --task-definition ${{secrets.ECS_TASK_DEFINITION}} \
+  --query 'taskDefinition.{
+  "containerDefinitions":containerDefinitions,
+  "family":family,
+  "executionRoleArn":executionRoleArn,
+  "networkMode":networkMode,
+  "volumes":volumes,
+  "placementConstraints":placementConstraints,
+  "requiresCompatibilities":requiresCompatibilities,
+  "cpu":cpu,
+  "memory":memory
+  }' > task_definition.json
+```
+
+Then we will create a new task revision, this is posible if we have the previous task definition, if not the command will create a new one
+
+```bash
+aws ecs register-task-definition \
+  --cli-input-json file://./task_definition.json
+```
+
+And in the end we only need to update the current service in the cluster
+
+```bash
+aws ecs update-service \
+            --cluster ${{secrets.CLUSTER_NAME}} \
+            --service ${{secrets.CLUSTER_SERVICE}} \
+            --task-definition ${{secrets.CONTAINER_NAME}}
+```
+
+This command will get the last revision of the task definition and tell the `service` to run the last version of the docker image, under the hood `ECS` will start a new 2 task **with out shutdown the previous one** a then stop the older versions once the new ones are running, giving **zero down time**
+
+## Automate everything
+
+In this repository are two [github actions](https://github.com/features/actions) workflows to automate everything and trigger the update of task from a new commit, splitting the infrastructure deploy from the code deploy
+
+## Authors and acknowledgment
+
+
