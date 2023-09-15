@@ -48,9 +48,9 @@ jobs:
       - name: Get the last task definition
         id: task-definition
         run: |
-          echo "definition=$(aws ecs describe-task-definition \
+          echo "definition='$(aws ecs describe-task-definition \
             --task-definition ${{secrets.CONTAINER_NAME}} \
-            --query taskDefinition)" >> $GITHUB_OUTPUT
+            --query taskDefinition)'" >> $GITHUB_OUTPUT
           
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
